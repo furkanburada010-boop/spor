@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <!-- Chosen Palette: Warm Neutral & Emerald Slate (Slate-900, Slate-800, Emerald-600, Amber-500, Neutral Light BG bg-stone-50) -->
+    <!-- Application Structure Plan: Tabbed interactive dashboard focusing on personal physical parameters. Designed with 7 focused modules: Physical Overview & Energy Balance, Interactive Weight & Measurement Tracker, Interactive Exercise Weight & Strength Log, Interactive Nutrition & Macro Calculator/Menu, 4-Day Upper/Lower Training Architecture, Concurrent Cardio & Supplement Matrix, and Progress Trajectory Simulator. -->
+    <!-- Visualization & Content Choices: 
+        1. Macro Breakdown -> Chart.js Donut Chart -> Highlights protein/fat/carb calorie split.
+        2. 24-Week Trajectory -> Chart.js Line Chart -> Simulation trajectory.
+        3. Weight Tracker -> Chart.js Line Chart & Dynamic Table -> Real-time local weight log tracking.
+        4. Exercise Weight Tracker -> Chart.js Line Chart, PR Metrics & Dynamic Filterable Table -> Progressive overload tracking per exercise.
+        Confirming NO SVG/Mermaid used. Canvas Chart.js used for dynamic charts. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vücut Rekompozisyonu ve Definasyon Yönetim Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 380px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .tab-btn.active {
+            border-bottom-color: #059669;
+            color: #059669;
+            font-weight: 700;
+        }
+        .day-tab.active {
+            background-color: #059669;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <span class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">Fizyoloji & Performans</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight">Kişisel Vücut Rekompozisyon Paneli</h1>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs md:text-sm bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
+                <div><span class="text-slate-400">Yaş:</span> <span class="font-semibold text-emerald-400">28</span></div>
+                <div class="text-slate-600">|</div>
+                <div><span class="text-slate-400">Boy:</span> <span class="font-semibold text-emerald-400">174 cm</span></div>
+                <div class="text-slate-600">|</div>
+                <div><span class="text-slate-400">Mevcut:</span> <span id="headerCurrentWeight" class="font-semibold text-amber-400">80 kg (%22 Yağ)</span></div>
+                <div class="text-slate-600">|</div>
+                <div><span class="text-slate-400">Hedef:</span> <span class="font-semibold text-emerald-400">68.5–71.5 kg (%11 Yağ)</span></div>
+            </div>
+        </div>
+        <!-- Tab Menu -->
+        <nav class="bg-slate-800 border-t border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto text-sm">
+                <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="tab-btn active py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    📊 Genel Bakış & Enerji
+                </button>
+                <button onclick="switchTab('tab-tracker')" id="btn-tab-tracker" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    ⚖️ Kilo & Ölçü Takibi
+                </button>
+                <button onclick="switchTab('tab-exercise-tracker')" id="btn-tab-exercise-tracker" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    💪 Ağırlık & Güç Takibi
+                </button>
+                <button onclick="switchTab('tab-nutrition')" id="btn-tab-nutrition" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    🥗 Beslenme & Makro Menü
+                </button>
+                <button onclick="switchTab('tab-workout')" id="btn-tab-workout" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    🏋️‍♂️ 4-5 Günlük Antrenman
+                </button>
+                <button onclick="switchTab('tab-cardio-supps')" id="btn-tab-cardio-supps" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    🚴‍♂️ Kardiyo & Takviyeler
+                </button>
+                <button onclick="switchTab('tab-simulator')" id="btn-tab-simulator" class="tab-btn py-3 px-4 border-b-2 border-transparent hover:text-emerald-400 whitespace-nowrap transition-colors">
+                    📈 24 Haftalık Simülatör
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+        <!-- SECTION 1: OVERVIEW & ENERGY BALANCE -->
+        <section id="tab-overview" class="tab-content block space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Fizyolojik Profil ve Enerji Dengesi Analizi</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Bu modül, 174 cm boy, 80 kg ağırlık ve 2.5 aylık spor tecrübesine sahip bireysel fizyolojik parametrelerinizi analiz eder. Spor salonundaki ilk aylarda "yeni başlayan avantajı" (newbie gains) sayesinde kalori açığı altındayken bile kas kütlesi kazanımı ve eşzamanlı yağ yakımı (vücut rekompozisyonu) mümkündür. Aşağıdaki tablolar ve kartlar günlük metabolik harcamanızı ve hedef definasyon kaloriniz gösterir.
+                </p>
+            </div>
+
+            <!-- Metric Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Bazal Metabolizma (BMR)</span>
+                        <div class="text-2xl font-extrabold text-slate-800 mt-1">1,718 - 1,836 <span class="text-sm font-normal text-slate-500">kcal</span></div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">Hayati organ fonksiyonlarının dinlenik halde harcadığı net enerji (Mifflin & Katch-McArdle modelleri).</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Toplam Enerji Harcaması (TDEE)</span>
+                        <div class="text-2xl font-extrabold text-slate-800 mt-1">2,629 <span class="text-sm font-normal text-slate-500">kcal/gün</span></div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">Haftada 4-5 gün direnç antrenmanı ve günlük aktiviteler dahil toplam harcanan kalori.</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border-2 border-emerald-500 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Hedef Günlük Kalori (Defisit)</span>
+                        <div class="text-3xl font-black text-emerald-600 mt-1">2,180 <span class="text-sm font-normal text-slate-600">kcal/gün</span></div>
+                    </div>
+                    <p class="text-xs text-slate-600 mt-3 font-medium">~450 kcal Ilımlı Kalori Açığı. Kas protein sentezini korurken haftada 400-500g saf yağ kaybı sağlar.</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Hedef Yağ Oranı & Kilo</span>
+                        <div class="text-2xl font-extrabold text-slate-800 mt-1">68.5 - 71.5 <span class="text-sm font-normal text-slate-500">kg</span></div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">%10-12 yağ oranında parçalı, belirgin abdominal hatlara (rectus abdominis) sahip nihai atletik form.</p>
+                </div>
+            </div>
+
+            <!-- BMR & TDEE Calculations Table -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Matematiksel Metabolizma Modelleri Karşılaştırması</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-lg">Hesaplama Formülü</th>
+                                <th class="px-4 py-3">Matematiksel Denklem</th>
+                                <th class="px-4 py-3">Hesaplanan BMR</th>
+                                <th class="px-4 py-3 rounded-r-lg">Fizyolojik Yorum</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100">
+                            <tr>
+                                <td class="px-4 py-3 font-semibold text-slate-800">Mifflin-St Jeor Model</td>
+                                <td class="px-4 py-3 font-mono text-xs">(10 × 80) + (6.25 × 174) - (5 × 28) + 5</td>
+                                <td class="px-4 py-3 font-bold text-slate-900">1,753 kcal</td>
+                                <td class="px-4 py-3">Genel popülasyon için standart kabul edilen metabolik hız.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-semibold text-slate-800">Revize Harris-Benedict</td>
+                                <td class="px-4 py-3 font-mono text-xs">88.36 + (13.4 × 80) + (4.8 × 174) - (5.7 × 28)</td>
+                                <td class="px-4 py-3 font-bold text-slate-900">1,836 kcal</td>
+                                <td class="px-4 py-3">Klasik modelleme, doku harcamalarını biraz yüksek kestirebilir.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-semibold text-slate-800">Katch-McArdle (%22 Yağ)</td>
+                                <td class="px-4 py-3 font-mono text-xs">370 + (21.6 × 62.4 kg Yağsız Kütle)</td>
+                                <td class="px-4 py-3 font-bold text-emerald-600">1,718 kcal</td>
+                                <td class="px-4 py-3">En hassas modeldir; doğrudan yağsız vücut kütlesini (62.4 kg) baz alır.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: WEIGHT & MEASUREMENT TRACKER -->
+        <section id="tab-tracker" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">İnteraktif Kilo ve Vücut Ölçü Takip Sistemi</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Vücut rekompozisyonunda gelişiminizi düzenli takip etmek başarının anahtarıdır. Aşağıdaki formu kullanarak sabah aç karnına tartıldığınız kilonuzu, bel çevrenizi ve yağ oranınızı kaydedebilirsiniz. Tüm verileriniz **tarayıcınızda (local storage)** otomatik saklanır.
+                </p>
+            </div>
+
+            <!-- Tracker Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Başlangıç Kilosu</span>
+                    <div id="trackStartWeight" class="text-2xl font-extrabold text-slate-800 mt-1">80.0 <span class="text-sm font-normal text-slate-500">kg</span></div>
+                    <span class="text-xs text-slate-400 block mt-1">Program Başlangıcı</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Son Ölçülen Kilo</span>
+                    <div id="trackCurrentWeight" class="text-2xl font-extrabold text-emerald-600 mt-1">-- <span class="text-sm font-normal text-slate-500">kg</span></div>
+                    <span id="trackLastDate" class="text-xs text-slate-400 block mt-1">Henüz veri yok</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Değişim</span>
+                    <div id="trackTotalChange" class="text-2xl font-extrabold text-amber-500 mt-1">0.0 <span class="text-sm font-normal text-slate-500">kg</span></div>
+                    <span class="text-xs text-slate-400 block mt-1">Toplam Fark</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Hedefe Kalan</span>
+                    <div id="trackTargetDiff" class="text-2xl font-extrabold text-slate-800 mt-1">-- <span class="text-sm font-normal text-slate-500">kg</span></div>
+                    <span class="text-xs text-slate-400 block mt-1">Hedef: 70.0 kg</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Input Form -->
+                <div class="lg:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-4">Yeni Ölçüm Ekle</h3>
+                        <form id="weightForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tarih</label>
+                                <input type="date" id="logDate" required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ağırlık (kg)</label>
+                                    <input type="number" step="0.1" id="logWeight" placeholder="Örn: 78.5" required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bel (cm)</label>
+                                    <input type="number" step="0.5" id="logWaist" placeholder="Örn: 88.0" class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tahmini Yağ Oranı (%)</label>
+                                <input type="number" step="0.1" id="logFat" placeholder="Örn: 20.5" class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Not / Açıklama</label>
+                                <input type="text" id="logNote" placeholder="Örn: Sabah aç karnına, kardiyo sonrası..." class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm transition-colors shadow-sm">
+                                ➕ Kaydı Ekle / Güncelle
+                            </button>
+                        </form>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-stone-100 flex gap-2 justify-between">
+                        <button onclick="loadDemoData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded">
+                            📊 Örnek Veri Yükle
+                        </button>
+                        <button onclick="clearAllLogs()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded">
+                            🗑️ Tümünü Temizle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Chart -->
+                <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 mb-1">Gerçekleşen Kilo ve Bel Çevresi Eğrisi</h3>
+                        <p class="text-xs text-slate-500 mb-4">Kaydedilen verileriniz üzerinden anlık değişim grafiği</p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="trackerChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Records Log Table -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Ölçüm Geçmişiniz</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-4 py-3">Tarih</th>
+                                <th class="px-4 py-3">Ağırlık (kg)</th>
+                                <th class="px-4 py-3">Bel Çevresi (cm)</th>
+                                <th class="px-4 py-3">Yağ Oranı (%)</th>
+                                <th class="px-4 py-3">Not</th>
+                                <th class="px-4 py-3 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trackerTableBody" class="divide-y divide-stone-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: EXERCISE WEIGHT & STRENGTH TRACKER -->
+        <section id="tab-exercise-tracker" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Egzersiz & Ağırlık Takip Sistemi (Progressive Overload)</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Kas kütlesini artırmanın ve kalori açığındayken kas korumanın en temel kuralı **Aşamalı Aşırı Yüklemedir (Progressive Overload)**. Salon seanslarınızda uyguladığınız hareketlerin adını, kaldırdığınız ağırlığı (kg) ve set/tekrar detaylarını aşağıdan kaydederek her egzersizdeki güç gelişiminizi grafik üzerinden takip edebilirsiniz.
+                </p>
+            </div>
+
+            <!-- Form & Dynamic Exercise Strength Graph -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Log Entry Form -->
+                <div class="lg:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-4">Ağırlık Kaydı Ekle</h3>
+                        <form id="exerciseForm" onsubmit="handleExFormSubmit(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tarih</label>
+                                <input type="date" id="exDate" required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Egzersiz Adı</label>
+                                <input type="text" id="exName" list="exSuggestions" placeholder="Örn: Bench Press, Squat, Lat Pulldown..." required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <datalist id="exSuggestions">
+                                    <option value="Barbell Flat Bench Press">
+                                    <option value="Barbell Back Squat">
+                                    <option value="Romanian Deadlift (RDL)">
+                                    <option value="Standing Overhead Press (OHP)">
+                                    <option value="T-Bar Row">
+                                    <option value="Lat Pulldown">
+                                    <option value="Incline Dumbbell Press">
+                                    <option value="Leg Press">
+                                    <option value="Cable Lateral Raise">
+                                    <option value="Barbell Biceps Curl">
+                                    <option value="Triceps Pushdown">
+                                </datalist>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ağırlık (kg)</label>
+                                    <input type="number" step="0.5" id="exWeight" placeholder="Örn: 60" required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Set × Tekrar</label>
+                                    <input type="text" id="exReps" placeholder="Örn: 3x8 veya 4x10" required class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Not / RIR (Zorluk Dercesi)</label>
+                                <input type="text" id="exNote" placeholder="Örn: RIR 2, form rahattı, haftaya +2.5kg" class="w-full text-sm p-2.5 bg-stone-50 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-sm transition-colors shadow-sm">
+                                🏋️‍♂️ Ağırlık Kaydını Kaydet
+                            </button>
+                        </form>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-stone-100 flex gap-2 justify-between">
+                        <button onclick="loadExerciseDemoData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded">
+                            📊 Örnek Ağırlık Verisi Yükle
+                        </button>
+                        <button onclick="clearAllExLogs()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded">
+                            🗑️ Tümünü Temizle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Strength Progress Chart -->
+                <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                            <h3 class="text-base font-bold text-slate-900">Egzersiz Güç ve Ağırlık Eğrisi</h3>
+                            <!-- Exercise Filter Select -->
+                            <div class="w-full sm:w-auto">
+                                <select id="chartExFilter" onchange="updateExerciseChart()" class="text-xs font-bold p-2 bg-stone-100 border border-stone-300 rounded-lg text-slate-800 focus:outline-none">
+                                    <option value="">-- Egzersiz Seçin --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Seçilen egzersizde zaman içerisindeki ağırlık (kg) artış grafiğiniz</p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="exerciseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Records (PR) Highlights -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-base font-bold text-slate-900 mb-3">🏆 En Yüksek Kaldırılan Ağırlıklar (Kişisel Rekorlar - PR)</h3>
+                <div id="prCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                    <div class="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center col-span-full text-xs text-slate-400 italic">
+                        Henüz kayıtlı egzersiz bulunmuyor.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exercise Records Log Table -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">Egzersiz Kayıt Geçmişi</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 font-medium">Filtrele:</span>
+                        <select id="tableExFilter" onchange="renderExerciseTracker()" class="text-xs font-bold p-2 bg-stone-100 border border-stone-300 rounded-lg text-slate-800 focus:outline-none">
+                            <option value="ALL">Tüm Egzersizler</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th class="px-4 py-3">Tarih</th>
+                                <th class="px-4 py-3">Egzersiz Adı</th>
+                                <th class="px-4 py-3">Ağırlık (kg)</th>
+                                <th class="px-4 py-3">Set × Tekrar</th>
+                                <th class="px-4 py-3">Not / RIR</th>
+                                <th class="px-4 py-3 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exerciseTableBody" class="divide-y divide-stone-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: NUTRITION & MACROS -->
+        <section id="tab-nutrition" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Makro Besin Dağılımı ve Günlük Örnek Menü</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Vücut rekompozisyonunda makro besin dengesi hayati öneme sahiptir. Yüksek protein (2.15 g/kg) kas proteolizini (yıkımını) engeller; yeterli diyet yağları (0.80 g/kg) hormonal üretimi korur; kompleks karbonhidratlar (2.75 g/kg) ise yüksek antrenman performansını ve glikojen depolarını destekler.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Macro Donut Chart -->
+                <div class="lg:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 mb-1">Günlük Kalori ve Makro Dağılımı</h3>
+                        <p class="text-xs text-slate-500 mb-4">Toplam Hedef: 2,180 kcal / Gün</p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="macroChart"></canvas>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-stone-100 text-xs text-slate-500 flex justify-around text-center">
+                        <div>
+                            <span class="block font-bold text-slate-800 text-sm">3.2 - 3.5 Litre</span>
+                            Günlük Su İhtiyacı
+                        </div>
+                        <div>
+                            <span class="block font-bold text-slate-800 text-sm">30 - 35 Gram</span>
+                            Diyet Lif Target
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Macro Breakdown Cards -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-500 border-stone-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-900">Protein (2.15 g/kg)</h4>
+                                <p class="text-xs text-slate-500 mt-1">Kas Protein Sentezi (MPS) & Dokuların Muhafazası</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xl font-black text-emerald-600">172 g</span>
+                                <span class="block text-xs text-slate-400">688 kcal (%31.5)</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-3">Öğün başına 30-45g protein tüketilerek 2.5-3.0g lösin eşiği aşılmalı, gün boyu kas sentezi açık tutulmalıdır.</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500 border-stone-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-900">Karbonhidrat (2.75 g/kg)</h4>
+                                <p class="text-xs text-slate-500 mt-1">Glikolitik Enerji ve Antrenman Performansı</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xl font-black text-amber-500">220 g</span>
+                                <span class="block text-xs text-slate-400">880 kcal (%40.3)</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-3">Karbonhidratların %60'ı antrenman öncesi ve sonrası pencerelerde (pre/post-workout) tüketilmelidir.</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-700 border-stone-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-900">Sağlıklı Yağlar (0.80 g/kg)</h4>
+                                <p class="text-xs text-slate-500 mt-1">Endokrin Sistem & Testosteron Sentezi</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xl font-black text-slate-700">64 g</span>
+                                <span class="block text-xs text-slate-400">576 kcal (%26.4)</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-3">Sızma zeytinyağı, ceviz, yumurta sarısı ve omega-3 açısından zengin kaynaklardan karşılanmalıdır.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Meal Plan Table -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Hassas Gramajlı Diyet Beslenme Programı</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Meal 1 -->
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-slate-900">1. Öğün: Kahvaltı</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">612 kcal</span>
+                        </div>
+                        <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                            <li>• 3 Adet Tam Yumurta + 2 Adet Yumurta Akı</li>
+                            <li>• 60 g Yulaf Ezmesi</li>
+                            <li>• 80 g Orman Meyvesi (Yaban Mersini/Çilek)</li>
+                            <li>• 15 g Ceviz İçi</li>
+                        </ul>
+                        <div class="text-xs text-slate-500 pt-2 border-t border-stone-200 flex justify-between font-mono">
+                            <span>P: 35.3g</span><span>Y: 29.7g</span><span>K: 50.0g</span>
+                        </div>
+                    </div>
+
+                    <!-- Meal 2 -->
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-slate-900">2. Öğün: Öğle (Antrenman Öncesi)</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">620 kcal</span>
+                        </div>
+                        <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                            <li>• 200 g Tavuk Göğsü (Çiğ Tartım)</li>
+                            <li>• 75 g Basmati Pirinç (Çiğ Tartım)</li>
+                            <li>• 10 g Sızma Zeytinyağı</li>
+                            <li>• 150 g Brokoli / Haşlanmış Yeşil Sebze</li>
+                        </ul>
+                        <div class="text-xs text-slate-500 pt-2 border-t border-stone-200 flex justify-between font-mono">
+                            <span>P: 54.0g</span><span>Y: 15.1g</span><span>K: 65.0g</span>
+                        </div>
+                    </div>
+
+                    <!-- Meal 3 -->
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-slate-900">3. Öğün: Antrenman Sonrası</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">300 kcal</span>
+                        </div>
+                        <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                            <li>• 1 Ölçek (30 g) Whey Protein İzolatı</li>
+                            <li>• 1 Orta Boy Muz (120 g)</li>
+                            <li>• 2 Adet Sade Pirinç Patlağı (20 g)</li>
+                        </ul>
+                        <div class="text-xs text-slate-500 pt-2 border-t border-stone-200 flex justify-between font-mono">
+                            <span>P: 26.9g</span><span>Y: 2.4g</span><span>K: 45.0g</span>
+                        </div>
+                    </div>
+
+                    <!-- Meal 4 -->
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-slate-900">4. Öğün: Akşam Yemeği</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">560 kcal</span>
+                        </div>
+                        <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                            <li>• 180 g Yağsız Dana Bonfile veya %95 Yağsız Kıyma</li>
+                            <li>• 250 g Fırınlanmış Patates / Tatlı Patates</li>
+                            <li>• 10 g Zeytinyağlı Bol Yeşillikli Salata</li>
+                        </ul>
+                        <div class="text-xs text-slate-500 pt-2 border-t border-stone-200 flex justify-between font-mono">
+                            <span>P: 44.5g</span><span>Y: 17.8g</span><span>K: 51.0g</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900 flex justify-between items-center">
+                    <span>💡 <strong>Opsiyonel Gece Eklemeleri:</strong> Günlük kalori açığını tam 2,180 kcal'ye tamamlamak için yatmadan önce 100g süzme lor peyniri (+12g Protein, +70 kcal) eklenebilir.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: WORKOUT ARCHITECTURE -->
+        <section id="tab-workout" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Direnç Antrenmanı Mimarisi (Upper / Lower Split)</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    2.5 aylık spor deneyimindeki bir birey için haftada 4 gün uygulanan **Üst Vücut / Alt Vücut (Upper/Lower)** bölünmesi optimal toparlanma ve kas hipertrofisi sağlar. Her kas grubu haftada 2 kez uyarılır. Aşamalı Aşırı Yükleme (Progressive Overload) kuralı uyarınca, hedeflenen tekrar üst sınırına ulaşıldığında ağırlık kademeli olarak artırılmalıdır.
+                </p>
+                <!-- Day Switcher Buttons -->
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <button onclick="showWorkoutDay('day-upper-a')" id="btn-day-upper-a" class="day-tab active px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300">
+                        Pazartesi: Üst Vücut A
+                    </button>
+                    <button onclick="showWorkoutDay('day-lower-a')" id="btn-day-lower-a" class="day-tab bg-white text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300">
+                        Salı: Alt Vücut A
+                    </button>
+                    <button onclick="showWorkoutDay('day-upper-b')" id="btn-day-upper-b" class="day-tab bg-white text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300">
+                        Perşembe: Üst Vücut B
+                    </button>
+                    <button onclick="showWorkoutDay('day-lower-b')" id="btn-day-lower-b" class="day-tab bg-white text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300">
+                        Cuma: Alt Vücut B
+                    </button>
+                    <button onclick="showWorkoutDay('day-active-rest')" id="btn-day-active-rest" class="day-tab bg-white text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-all border border-slate-300">
+                        Çarşamba / Hafta Sonu: Dinlenme & Kardiyo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Workout Content Panels -->
+            <!-- UPPER A -->
+            <div id="day-upper-a" class="workout-day-content block space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-900">Pazartesi: Üst Vücut A (Yatay İtiş & Çekiş Odaklı)</h3>
+                        <span class="text-xs text-slate-500">Hedef: Göğüs, Sırt, Omuz & Kollar | Toplam Set: 22 Set</span>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">Seans Süresi: ~65 Dk</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-4 py-3">Egzersiz Hareket</th>
+                                    <th class="px-4 py-3">Hedef Kas</th>
+                                    <th class="px-4 py-3">Set & Tekrar</th>
+                                    <th class="px-4 py-3">Şiddet (RIR)</th>
+                                    <th class="px-4 py-3">Dinlenme</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100">
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Barbell Flat Bench Press</td>
+                                    <td class="px-4 py-3">Göğüs (Pectoralis Major)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 6-8 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 2</span></td>
+                                    <td class="px-4 py-3">2.5 - 3.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Göğüs Destekli T-Bar Row</td>
+                                    <td class="px-4 py-3">Sırt & Latissimus Dorsi</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Incline Dumbbell Press (30°)</td>
+                                    <td class="px-4 py-3">Üst Göğüs (Clavicular Head)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Geniş Tutuş Lat Pulldown</td>
+                                    <td class="px-4 py-3">Üst Sırt & Kanat</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Cable Lateral Raise</td>
+                                    <td class="px-4 py-3">Yan Omuz (Lateral Deltoid)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">4 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">60-90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Halat Triceps Pushdown</td>
+                                    <td class="px-4 py-3">Arka Kol (Triceps Lateral Head)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">60-90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Incline Dumbbell Biceps Curl</td>
+                                    <td class="px-4 py-3">Ön Kol (Biceps Long Head)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">60-90 Saniye</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOWER A -->
+            <div id="day-lower-a" class="workout-day-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-900">Salı: Alt Vücut A (Diz Baskın & Kuadriseps Odaklı)</h3>
+                        <span class="text-xs text-slate-500">Hedef: Kuadriseps, Hamstring, Baldır & Karın | Toplam Set: 19 Set</span>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">Seans Süresi: ~60 Dk</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-4 py-3">Egzersiz Hareket</th>
+                                    <th class="px-4 py-3">Hedef Kas</th>
+                                    <th class="px-4 py-3">Set & Tekrar</th>
+                                    <th class="px-4 py-3">Şiddet (RIR)</th>
+                                    <th class="px-4 py-3">Dinlenme</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100">
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Barbell Back Squat</td>
+                                    <td class="px-4 py-3">Kuadriseps & Kalça</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 6-8 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 2</span></td>
+                                    <td class="px-4 py-3">3.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Romanian Deadlift (RDL)</td>
+                                    <td class="px-4 py-3">Hamstring & Gluteus</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 2</span></td>
+                                    <td class="px-4 py-3">2.5 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">45-Degree Leg Press</td>
+                                    <td class="px-4 py-3">Kuadriseps Kütle</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Lying Leg Curl</td>
+                                    <td class="px-4 py-3">Hamstring İzolasyon</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Standing Calf Raise</td>
+                                    <td class="px-4 py-3">Gastrocnemius (Baldır)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">4 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0</span></td>
+                                    <td class="px-4 py-3">60 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Hanging Leg / Knee Raise</td>
+                                    <td class="px-4 py-3">Rectus Abdominis (Karın)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">60 Saniye</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPPER B -->
+            <div id="day-upper-b" class="workout-day-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-900">Perşembe: Üst Vücut B (Dikey İtiş & Çekiş Odaklı)</h3>
+                        <span class="text-xs text-slate-500">Hedef: Omuz Genişliği, Latissimus, Göğüs & Kollar | Toplam Set: 22 Set</span>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">Seans Süresi: ~65 Dk</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-4 py-3">Egzersiz Hareket</th>
+                                    <th class="px-4 py-3">Hedef Kas</th>
+                                    <th class="px-4 py-3">Set & Tekrar</th>
+                                    <th class="px-4 py-3">Şiddet (RIR)</th>
+                                    <th class="px-4 py-3">Dinlenme</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100">
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Standing Overhead Press (OHP)</td>
+                                    <td class="px-4 py-3">Ön/Yan Omuz & Triceps</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 6-8 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 2</span></td>
+                                    <td class="px-4 py-3">2.5 - 3.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Nötr Tutuş Barfiks veya Pulldown</td>
+                                    <td class="px-4 py-3">Sırt & Kanat Derinliği</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 6-8 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Dumbbell Flat Bench Press</td>
+                                    <td class="px-4 py-3">Göğüs Hipertrofisi</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Tek Kol Dumbbell Row</td>
+                                    <td class="px-4 py-3">Sırt Kalınlığı</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Ayakta Dumbbell Lateral Raise</td>
+                                    <td class="px-4 py-3">Yan Omuz (3D Görünüm)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">4 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">60 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">EZ-Bar Lying Triceps Extension</td>
+                                    <td class="px-4 py-3">Triceps Uzun Baş</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Ayakta EZ-Bar Biceps Curl</td>
+                                    <td class="px-4 py-3">Biceps Hacim</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOWER B -->
+            <div id="day-lower-b" class="workout-day-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-900">Cuma: Alt Vücut B (Kalça & Arka Bacak Odaklı)</h3>
+                        <span class="text-xs text-slate-500">Hedef: Posterior Chain, Hamstring, Kuadriseps & Karın | Toplam Set: 19 Set</span>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">Seans Süresi: ~60 Dk</span>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-4 py-3">Egzersiz Hareket</th>
+                                    <th class="px-4 py-3">Hedef Kas</th>
+                                    <th class="px-4 py-3">Set & Tekrar</th>
+                                    <th class="px-4 py-3">Şiddet (RIR)</th>
+                                    <th class="px-4 py-3">Dinlenme</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100">
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Trap Bar veya Conventional Deadlift</td>
+                                    <td class="px-4 py-3">Tüm Posterior Chain</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 5-6 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 2</span></td>
+                                    <td class="px-4 py-3">3.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Bulgarian Split Squat</td>
+                                    <td class="px-4 py-3">Kuadriseps & Kalça Stabilizasyon</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 8-10 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">RIR 1-2</span></td>
+                                    <td class="px-4 py-3">2.0 Dk</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Leg Extension</td>
+                                    <td class="px-4 py-3">Kuadriseps İzolasyon</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Seated Leg Curl</td>
+                                    <td class="px-4 py-3">Hamstring Hipertrofi</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 10-12 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0-1</span></td>
+                                    <td class="px-4 py-3">90 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Seated Calf Raise</td>
+                                    <td class="px-4 py-3">Soleus (Alt Baldır)</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">4 Set × 12-15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">RIR 0</span></td>
+                                    <td class="px-4 py-3">60 Saniye</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">Cable Crunch veya Plank Variation</td>
+                                    <td class="px-4 py-3">Karın Kasları & Core</td>
+                                    <td class="px-4 py-3 font-bold text-emerald-600">3 Set × 15 Tekrar</td>
+                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">RIR 1</span></td>
+                                    <td class="px-4 py-3">60 Saniye</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REST & CARDIO DAY -->
+            <div id="day-active-rest" class="workout-day-content hidden space-y-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <h3 class="font-bold text-slate-900 mb-2">Çarşamba & Hafta Sonu: Dinlenme ve Aktif Toparlanma</h3>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                        Dinlenme günleri kas dokusunun tamir edildiği, merkezi sinir sisteminin yenilendiği dönemdir. Çarşamba tam dinlenme veya 25-30 dakikalık tempolu açık hava yürüyüşü ile geçirilmelidir. Haftada 5. gün salona gidilmek istenirse bu gün ek egzersiz eklemek yerine sadece karın, yan omuz ve kardiyo seansı yapılmalıdır.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-3 bg-stone-50 rounded-lg border border-stone-200 text-xs">
+                            <span class="font-bold text-slate-800 block mb-1">Çarşamba Protokolü:</span>
+                            • Tam Pasif Dinlenme veya 8,000 Adım Hafif Yürüyüş<br>
+                            • Esneme ve Bacak Köpük Rulo (Foam Roller) Masajı
+                        </div>
+                        <div class="p-3 bg-stone-50 rounded-lg border border-stone-200 text-xs">
+                            <span class="font-bold text-slate-800 block mb-1">Cumartesi / Pazar Protokolü:</span>
+                            • 25 Dakika Zone 2 LISS Kardiyo (Eğimli Yürüyüş)<br>
+                            • 8-9 Saat Kesintisiz Uyku
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progressive Overload Rule Box -->
+            <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs text-emerald-950 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-emerald-900 mb-1">📌 Çift Aşamalı İlerleme (Double Progression) Kuralı</h4>
+                    <p>Örneğin bir harekette 3 set 8-10 tekrar hedefi varsa: Mevcut ağırlıkla 3 sette de 10 tekrar tamamlayana kadar ağırlığı artırmayın. 3×10 bittiğinde sonraki antrenman ağırlığı 1.25-2.5 kg artırın (tekrar 8'e düşecektir) ve yeniden 10 tekrara ulaşmaya çalışın.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: CARDIO & SUPPLEMENTS -->
+        <section id="tab-cardio-supps" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">Eşzamanlı Kardiyo Programı & Ergojenik Takviye Matrisi</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Kardiyo çalışmaları, direnç antrenmanından elde edilen kas büyümesi sinyalini (mTOR yolağı) engellememek için düşük darbeli (low-impact) ve ılımlı şiddette (Zone 2) yapılmalıdır. Yüksek tempolu koşular bacaklarda mikro-travma yaratarak kuvvet gelişimini sekteye uğratabilir.
+                </p>
+            </div>
+
+            <!-- Cardio Matrix Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-900">LISS Eğimli Yürüyüş</h3>
+                        <span class="text-xs bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded">A-Seviye</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3">Koşu bandında %8–12 Eğim, 4.8–5.3 km/s hız. Kalp Atım Hızı %60–70 KAH_maks bölgesinde tutulur.</p>
+                    <div class="text-xs text-slate-500 pt-2 border-t border-stone-100 flex justify-between">
+                        <span>Haftada 2-3 Seans</span>
+                        <span class="font-bold text-emerald-600">150-220 kcal / Seans</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-900">Kondisyon Bisikleti</h3>
+                        <span class="text-xs bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded">Düşük Darbe</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3">Düşük-orta direnç seviyesi, 70-80 RPM kadans. Eklem yükünü sıfırlayarak yağ oksidasyonunu hızlandırır.</p>
+                    <div class="text-xs text-slate-500 pt-2 border-t border-stone-100 flex justify-between">
+                        <span>Haftada 1-2 Seans</span>
+                        <span class="font-bold text-emerald-600">160-200 kcal / Seans</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-stone-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-900">NEAT (Adım Sayısı)</h3>
+                        <span class="text-xs bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded">Günlük Aktivite</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3">Gün içine yayılmış yapısallaştırılmamış hafif yürüyüşler. Günlük 8,000 – 10,000 adım hedefi.</p>
+                    <div class="text-xs text-slate-500 pt-2 border-t border-stone-100 flex justify-between">
+                        <span>Her Gün</span>
+                        <span class="font-bold text-emerald-600">250-350 kcal / Gün</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplements Grid -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Kanıta Dayalı A-Sınıfı Ergojenik Takviye Protokolü</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">Kreatin Monohidrat</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">3-5 g / Gün</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">Kas içi fosfokreatin satürasyonu sağlayarak kalori açığı altında patlayıcı gücü ve hücresel hidrasyonu korur.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Her gün sabit saatte bol su ile.</span>
+                    </div>
+
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">Whey Protein İzolatı</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">1 Ölçek (30g)</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">Yüksek lösin içeriğiyle antrenman sonrası kas protein sentezini (MPS) en hızlı tetikleyen yüksek kaliteli kaynak.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Antrenman sonrası veya pratik ara öğün.</span>
+                    </div>
+
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">Omega-3 Balık Yağı</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">1500-2000mg</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">EPA/DHA yağ asitleri kas zarı akışkanlığını ve insülin duyarlılığını artırır, antrenman ağrısını (DOMS) azaltır.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Ana öğünle birlikte.</span>
+                    </div>
+
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">Magnezyum Bisglisinat</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">200-300 mg</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">Santral sinir sistemi regülasyonu, nöromüsküler gevşeme ve derin REM uykusunun kalitesini artırmak içindir.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Uykudan 60 dakika önce.</span>
+                    </div>
+
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">Kafein (Anhidroz/Kahve)</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">150-200 mg</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">Adenozin reseptör antagonistliği üzerinden algılanan efor oranını (RPE) düşürür ve antrenman içi odaklanmayı artırır.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Antrenmandan 30-45 dk önce.</span>
+                    </div>
+
+                    <div class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-900">D3 Vitamini</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">2000-4000 IU</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-2">Endojen testosteron sentezi ve kas lifi kontraktilitesi için kritik öneme sahip steroid benzeri pro-hormon.</p>
+                        <span class="text-xs text-slate-400 block border-t border-stone-200 pt-2">Zamanlama: Sabah yağlı bir öğünle.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sleep & Recovery Callout -->
+            <div class="bg-slate-900 text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h4 class="font-bold text-lg text-emerald-400 mb-1">😴 Uyku Biyolojisi ve Kas Korunumu</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed max-w-3xl">
+                        Klinik araştırmalar (Nedeltcheva et al.), kalori açığındayken 8.5 saat uyuyan bireylerin kaybettikleri ağırlığın %50'sinden fazlasını saf yağdan karşıladığını; buna karşın 5.5 saat uyuyanların kaybettikleri ağırlığın %80'ini kas kütlesinden kaybettiğini göstermektedir. Her gece 7.5–8.5 saat kesintisiz uyku zorunludur.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 7: PROGRESS TRAJECTORY SIMULATOR -->
+        <section id="tab-simulator" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h2 class="text-xl font-bold text-slate-900 mb-2">24 Haftalık Dönüşüm ve İlerleme Simülatörü</h2>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Aşağıdaki interaktif zaman kaydırıcısını (slider) sürükleyerek 24 haftalık süreç boyunca tahmini vücut ağırlığınızı, yağ oranınızı ve bel çevrenizdeki değişimi simüle edebilirsiniz. Vücut rekompozisyonunda tartı rakamı kas kazanımı ve yağ kaybı eşzamanlı gerçekleştiği için yavaş düşebilir; bu sebeple mezura ölçümü en net göstergedir.
+                </p>
+            </div>
+
+            <!-- Interactive Slider Box -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <div>
+                        <label for="weekSlider" class="font-bold text-slate-900 text-sm">Hafta Seçimi:</label>
+                        <span id="weekDisplay" class="text-xl font-black text-emerald-600 ml-2">12. Hafta</span>
+                    </div>
+                    <div class="flex gap-4 text-center text-xs">
+                        <div class="bg-stone-100 p-2 rounded-lg min-w-[100px]">
+                            <span class="block text-slate-400">Tahmini Kilo</span>
+                            <span id="simWeight" class="text-base font-bold text-slate-800">74.2 kg</span>
+                        </div>
+                        <div class="bg-stone-100 p-2 rounded-lg min-w-[100px]">
+                            <span class="block text-slate-400">Yağ Oranı</span>
+                            <span id="simFat" class="text-base font-bold text-amber-600">%16.2</span>
+                        </div>
+                        <div class="bg-stone-100 p-2 rounded-lg min-w-[100px]">
+                            <span class="block text-slate-400">Bel Çevresi Kaybı</span>
+                            <span id="simWaist" class="text-base font-bold text-emerald-600">-5.8 cm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="range" id="weekSlider" min="1" max="24" value="12" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" oninput="updateSimulation(this.value)">
+                
+                <div class="flex justify-between text-xs text-slate-400 mt-2 font-mono">
+                    <span>1. Hafta (Başlangıç: 80kg)</span>
+                    <span>12. Hafta (Geçiş)</span>
+                    <span>24. Hafta (Hedef: ~69.5kg)</span>
+                </div>
+            </div>
+
+            <!-- Trajectory Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-base font-bold text-slate-900 mb-2">24 Haftalık Kilo ve Yağ Oranı Projeksiyon Eğrisi</h3>
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tracking Methodology Guidance -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-3">İlerleme Takip ve Adaptasyon Protokolü</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+                    <div class="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                        <strong class="text-slate-900 block mb-1">1. Günlük Tartım & Ortalamalar:</strong>
+                        Her sabah aç karnına, idrar sonrası tartılın. 7 günlük hareketli aritmetik ortalamayı alın. Haftalık ortalama kayıp %0.5–0.8 aralığında olmalıdır.
+                    </div>
+                    <div class="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                        <strong class="text-slate-900 block mb-1">2. Bel Çevresi Ölçümü:</strong>
+                        İki haftada bir sabah aç karnına göbek deliği hizasından mezura sıkılmadan ölçün. Tartı sabit kalsa bile bel daralıyorsa rekompozisyon başarılıdır.
+                    </div>
+                    <div class="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                        <strong class="text-slate-900 block mb-1">3. Platoları Aşma Kuralı:</strong>
+                        Kilo ve bel ölçüsü 3 hafta üst üste durursa: Karbonhidrattan 100 kcal (25g) kesin VEYA kardiyoya haftalık +10 dk LISS ekleyin.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p>Vücut Rekompozisyonu ve Definasyon Fizyolojisi Yönetim Paneli</p>
+            <p class="text-slate-500">Bu rapor ve gösterge paneli yalnızca bilgilendirme amaçlıdır. Tıbbi tavsiye veya teşhis yerine geçmez.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Global variables & state
+        let trackerChartInstance = null;
+        let exerciseChartInstance = null;
+
+        // Tab Switcher Logic
+        function switchTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const btns = document.querySelectorAll('.tab-btn');
+
+            tabs.forEach(tab => tab.classList.add('hidden'));
+            btns.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            if (tabId === 'tab-tracker') {
+                renderTracker();
+            } else if (tabId === 'tab-exercise-tracker') {
+                renderExerciseTracker();
+            }
+        }
+
+        // Workout Day Switcher Logic
+        function showWorkoutDay(dayId) {
+            const days = document.querySelectorAll('.workout-day-content');
+            const btns = document.querySelectorAll('.day-tab');
+
+            days.forEach(day => day.classList.add('hidden'));
+            btns.forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.remove('bg-emerald-600');
+                btn.classList.remove('text-white');
+                btn.classList.add('bg-white');
+                btn.classList.add('text-slate-700');
+            });
+
+            const targetDay = document.getElementById(dayId);
+            const targetBtn = document.getElementById('btn-' + dayId);
+
+            if (targetDay && targetBtn) {
+                targetDay.classList.remove('hidden');
+                targetBtn.classList.add('active');
+                targetBtn.classList.remove('bg-white');
+                targetBtn.classList.remove('text-slate-700');
+            }
+        }
+
+        // Simulation Slider Logic
+        function updateSimulation(week) {
+            document.getElementById('weekDisplay').innerText = week + '. Hafta';
+            
+            const weight = (80 - (week * 0.437)).toFixed(1);
+            const fat = (22 - (week * 0.458)).toFixed(1);
+            const waist = (week * 0.48).toFixed(1);
+
+            document.getElementById('simWeight').innerText = weight + ' kg';
+            document.getElementById('simFat').innerText = '%' + fat;
+            document.getElementById('simWaist').innerText = '-' + waist + ' cm';
+        }
+
+        // --- LOCAL STORAGE WEIGHT TRACKER SYSTEM ---
+        function getWeightLogs() {
+            const logs = localStorage.getItem('vucut_rekomp_logs');
+            if (logs) {
+                return JSON.parse(logs);
+            }
+            return [];
+        }
+
+        function saveWeightLogs(logs) {
+            logs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            localStorage.setItem('vucut_rekomp_logs', JSON.stringify(logs));
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('logDate').value;
+            const weight = parseFloat(document.getElementById('logWeight').value);
+            const waist = document.getElementById('logWaist').value ? parseFloat(document.getElementById('logWaist').value) : null;
+            const fat = document.getElementById('logFat').value ? parseFloat(document.getElementById('logFat').value) : null;
+            const note = document.getElementById('logNote').value || '';
+
+            if (!date || isNaN(weight)) return;
+
+            let logs = getWeightLogs();
+            const existingIndex = logs.findIndex(l => l.date === date);
+
+            const newEntry = { date, weight, waist, fat, note };
+
+            if (existingIndex >= 0) {
+                logs[existingIndex] = newEntry;
+            } else {
+                logs.push(newEntry);
+            }
+
+            saveWeightLogs(logs);
+            document.getElementById('logNote').value = '';
+            document.getElementById('logWaist').value = '';
+            document.getElementById('logFat').value = '';
+            
+            renderTracker();
+        }
+
+        function deleteLog(date) {
+            let logs = getWeightLogs();
+            logs = logs.filter(l => l.date !== date);
+            saveWeightLogs(logs);
+            renderTracker();
+        }
+
+        function clearAllLogs() {
+            if (confirm('Tüm kilo kayıtlarınızı silmek istediğinize emin misiniz?')) {
+                localStorage.removeItem('vucut_rekomp_logs');
+                renderTracker();
+            }
+        }
+
+        function loadDemoData() {
+            const demoLogs = [
+                { date: '2026-09-01', weight: 80.0, waist: 92.0, fat: 22.0, note: 'Başlangıç ölçümü' },
+                { date: '2026-09-10', weight: 79.2, waist: 91.0, fat: 21.6, note: 'Defisit ve beslenme oturuyor' },
+                { date: '2026-09-20', weight: 78.4, waist: 89.5, fat: 21.0, note: 'Güç artışı stabil' },
+                { date: '2026-10-01', weight: 77.6, waist: 88.5, fat: 20.3, note: 'Bel çevresinde belirgin incelme' }
+            ];
+            saveWeightLogs(demoLogs);
+            renderTracker();
+        }
+
+        function renderTracker() {
+            const logs = getWeightLogs();
+            const tbody = document.getElementById('trackerTableBody');
+            tbody.innerHTML = '';
+
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 italic">Henüz kaydedilmiş bir ölçüm bulunmuyor. Sol taraftaki formdan ekleyebilirsiniz.</td></tr>`;
+                document.getElementById('trackCurrentWeight').innerHTML = `-- <span class="text-sm font-normal text-slate-500">kg</span>`;
+                document.getElementById('trackLastDate').innerText = `Henüz veri yok`;
+                document.getElementById('trackTotalChange').innerHTML = `0.0 <span class="text-sm font-normal text-slate-500">kg</span>`;
+                document.getElementById('trackTargetDiff').innerHTML = `-- <span class="text-sm font-normal text-slate-500">kg</span>`;
+                updateTrackerChart([], [], []);
+                return;
+            }
+
+            const latestLog = logs[logs.length - 1];
+            const startLog = logs[0];
+            const totalDiff = (latestLog.weight - startLog.weight).toFixed(1);
+            const targetDiff = (latestLog.weight - 70.0).toFixed(1);
+
+            document.getElementById('trackStartWeight').innerHTML = `${startLog.weight.toFixed(1)} <span class="text-sm font-normal text-slate-500">kg</span>`;
+            document.getElementById('trackCurrentWeight').innerHTML = `${latestLog.weight.toFixed(1)} <span class="text-sm font-normal text-slate-500">kg</span>`;
+            document.getElementById('trackLastDate').innerText = `Son ölçüm: ${latestLog.date}`;
+            document.getElementById('headerCurrentWeight').innerText = `${latestLog.weight.toFixed(1)} kg (${latestLog.fat ? '%' + latestLog.fat : 'Takipte'})`;
+            
+            const diffColorClass = totalDiff <= 0 ? 'text-emerald-600' : 'text-amber-600';
+            document.getElementById('trackTotalChange').className = `text-2xl font-extrabold mt-1 ${diffColorClass}`;
+            document.getElementById('trackTotalChange').innerHTML = `${totalDiff > 0 ? '+' : ''}${totalDiff} <span class="text-sm font-normal text-slate-500">kg</span>`;
+            
+            document.getElementById('trackTargetDiff').innerHTML = `${targetDiff > 0 ? targetDiff : '0.0'} <span class="text-sm font-normal text-slate-500">kg</span>`;
+
+            [...logs].reverse().forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-800">${log.date}</td>
+                    <td class="px-4 py-3 font-bold text-emerald-600">${log.weight.toFixed(1)} kg</td>
+                    <td class="px-4 py-3">${log.waist ? log.waist + ' cm' : '-'}</td>
+                    <td class="px-4 py-3">${log.fat ? '%' + log.fat : '-'}</td>
+                    <td class="px-4 py-3 text-slate-500">${log.note || '-'}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="deleteLog('${log.date}')" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 p-1.5 rounded">Sil</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const labels = logs.map(l => l.date);
+            const weightData = logs.map(l => l.weight);
+            const waistData = logs.map(l => l.waist);
+
+            updateTrackerChart(labels, weightData, waistData);
+        }
+
+        function updateTrackerChart(labels, weightData, waistData) {
+            const ctx = document.getElementById('trackerChart').getContext('2d');
+
+            if (trackerChartInstance) {
+                trackerChartInstance.destroy();
+            }
+
+            trackerChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Kilo (kg)',
+                            data: weightData,
+                            borderColor: '#059669',
+                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Bel Çevresi (cm)',
+                            data: waistData,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.2,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'Ağırlık (kg)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: 'Bel (cm)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        }
+
+
+        // --- LOCAL STORAGE EXERCISE WEIGHT TRACKER SYSTEM ---
+        function getExerciseLogs() {
+            const logs = localStorage.getItem('vucut_rekomp_ex_logs');
+            if (logs) {
+                return JSON.parse(logs);
+            }
+            return [];
+        }
+
+        function saveExerciseLogs(logs) {
+            logs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            localStorage.setItem('vucut_rekomp_ex_logs', JSON.stringify(logs));
+        }
+
+        function handleExFormSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('exDate').value;
+            const name = document.getElementById('exName').value.trim();
+            const weight = parseFloat(document.getElementById('exWeight').value);
+            const reps = document.getElementById('exReps').value.trim();
+            const note = document.getElementById('exNote').value.trim();
+
+            if (!date || !name || isNaN(weight)) return;
+
+            let logs = getExerciseLogs();
+            const newEntry = { id: Date.now(), date, name, weight, reps, note };
+            logs.push(newEntry);
+
+            saveExerciseLogs(logs);
+
+            document.getElementById('exWeight').value = '';
+            document.getElementById('exReps').value = '';
+            document.getElementById('exNote').value = '';
+
+            renderExerciseTracker(name);
+        }
+
+        function deleteExLog(id) {
+            let logs = getExerciseLogs();
+            logs = logs.filter(l => l.id !== id);
+            saveExerciseLogs(logs);
+            renderExerciseTracker();
+        }
+
+        function clearAllExLogs() {
+            if (confirm('Tüm egzersiz ve ağırlık kayıtlarınızı silmek istediğinize emin misiniz?')) {
+                localStorage.removeItem('vucut_rekomp_ex_logs');
+                renderExerciseTracker();
+            }
+        }
+
+        function loadExerciseDemoData() {
+            const demoExLogs = [
+                { id: 1, date: '2026-09-02', name: 'Barbell Flat Bench Press', weight: 50.0, reps: '3x8', note: 'İyi hissettirdi' },
+                { id: 2, date: '2026-09-09', name: 'Barbell Flat Bench Press', weight: 52.5, reps: '3x8', note: 'Son set RIR 1' },
+                { id: 3, date: '2026-09-16', name: 'Barbell Flat Bench Press', weight: 55.0, reps: '3x8', note: 'Form stabil' },
+                { id: 4, date: '2026-09-23', name: 'Barbell Flat Bench Press', weight: 57.5, reps: '3x8', note: 'Ağırlık arttı' },
+                { id: 5, date: '2026-09-30', name: 'Barbell Flat Bench Press', weight: 60.0, reps: '3x6', note: 'Yeni rekor (PR) 🔥' },
+                { id: 6, date: '2026-09-03', name: 'Barbell Back Squat', weight: 60.0, reps: '3x8', note: 'Derinlik iyi' },
+                { id: 7, date: '2026-09-17', name: 'Barbell Back Squat', weight: 65.0, reps: '3x8', note: 'Rahat' },
+                { id: 8, date: '2026-09-24', name: 'Barbell Back Squat', weight: 70.0, reps: '3x8', note: 'Güçlü hissediyorum' },
+                { id: 9, date: '2026-09-04', name: 'Romanian Deadlift (RDL)', weight: 55.0, reps: '3x10', note: 'Hamstring esnemesi süper' },
+                { id: 10, date: '2026-09-18', name: 'Romanian Deadlift (RDL)', weight: 62.5, reps: '3x10', note: 'Grip iyi' }
+            ];
+            saveExerciseLogs(demoExLogs);
+            renderExerciseTracker('Barbell Flat Bench Press');
+        }
+
+        function renderExerciseTracker(preferredExName) {
+            const logs = getExerciseLogs();
+            const tableFilter = document.getElementById('tableExFilter').value;
+            const chartFilterSelect = document.getElementById('chartExFilter');
+            const tableFilterSelect = document.getElementById('tableExFilter');
+
+            // Unique exercise names
+            const uniqueExNames = [...new Set(logs.map(l => l.name))].sort();
+
+            // Populate Dropdowns
+            const currentChartSelected = preferredExName || chartFilterSelect.value || (uniqueExNames[0] || '');
+            
+            chartFilterSelect.innerHTML = uniqueExNames.length ? '' : '<option value="">-- Veri Yok --</option>';
+            uniqueExNames.forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex;
+                opt.innerText = ex;
+                if (ex === currentChartSelected) opt.selected = true;
+                chartFilterSelect.appendChild(opt);
+            });
+
+            tableFilterSelect.innerHTML = '<option value="ALL">Tüm Egzersizler</option>';
+            uniqueExNames.forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex;
+                opt.innerText = ex;
+                if (ex === tableFilter) opt.selected = true;
+                tableFilterSelect.appendChild(opt);
+            });
+
+            // Populate PR Cards
+            const prCardsContainer = document.getElementById('prCardsContainer');
+            prCardsContainer.innerHTML = '';
+
+            if (uniqueExNames.length === 0) {
+                prCardsContainer.innerHTML = `<div class="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center col-span-full text-xs text-slate-400 italic">Henüz kayıtlı egzersiz bulunmuyor.</div>`;
+            } else {
+                uniqueExNames.slice(0, 6).forEach(ex => {
+                    const exLogs = logs.filter(l => l.name === ex);
+                    const maxWeight = Math.max(...exLogs.map(l => l.weight));
+                    const card = document.createElement('div');
+                    card.className = 'p-3 bg-stone-50 rounded-lg border border-stone-200 text-center flex flex-col justify-between';
+                    card.innerHTML = `
+                        <span class="text-[10px] font-bold text-slate-400 uppercase truncate block" title="${ex}">${ex}</span>
+                        <div class="text-lg font-black text-emerald-600 my-1">${maxWeight} <span class="text-xs font-normal text-slate-500">kg</span></div>
+                        <span class="text-[10px] text-slate-400">PR Rekor</span>
+                    `;
+                    prCardsContainer.appendChild(card);
+                });
+            }
+
+            // Populate Table
+            const tbody = document.getElementById('exerciseTableBody');
+            tbody.innerHTML = '';
+
+            let filteredLogs = logs;
+            if (tableFilterSelect.value && tableFilterSelect.value !== 'ALL') {
+                filteredLogs = logs.filter(l => l.name === tableFilterSelect.value);
+            }
+
+            if (filteredLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 italic">Kayıtlı egzersiz verisi bulunamadı.</td></tr>`;
+            } else {
+                [...filteredLogs].reverse().forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition-colors';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-semibold text-slate-800">${log.date}</td>
+                        <td class="px-4 py-3 font-bold text-slate-900">${log.name}</td>
+                        <td class="px-4 py-3 font-extrabold text-emerald-600">${log.weight} kg</td>
+                        <td class="px-4 py-3 font-mono text-xs">${log.reps || '-'}</td>
+                        <td class="px-4 py-3 text-slate-500">${log.note || '-'}</td>
+                        <td class="px-4 py-3 text-right">
+                            <button onclick="deleteExLog(${log.id})" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 p-1.5 rounded">Sil</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Update Exercise Strength Chart
+            updateExerciseChart();
+        }
+
+        function updateExerciseChart() {
+            const logs = getExerciseLogs();
+            const selectedEx = document.getElementById('chartExFilter').value;
+            const ctx = document.getElementById('exerciseChart').getContext('2d');
+
+            if (exerciseChartInstance) {
+                exerciseChartInstance.destroy();
+            }
+
+            if (!selectedEx) {
+                return;
+            }
+
+            const exLogs = logs.filter(l => l.name === selectedEx).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const labels = exLogs.map(l => l.date);
+            const weights = exLogs.map(l => l.weight);
+
+            exerciseChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${selectedEx} Ağırlık (kg)`,
+                        data: weights,
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.15)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#059669'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            type: 'linear',
+                            title: { display: true, text: 'Ağırlık (kg)' },
+                            suggestedMin: Math.max(0, Math.min(...weights) - 5)
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const reps = exLogs[index].reps ? ` (${exLogs[index].reps})` : '';
+                                    return ` Ağırlık: ${context.raw} kg ${reps}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // Chart.js Initializations on Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('logDate').value = today;
+            document.getElementById('exDate').value = today;
+
+            renderTracker();
+            renderExerciseTracker();
+
+            // Chart 1: Macro Donut Chart
+            const ctxMacro = document.getElementById('macroChart').getContext('2d');
+            new Chart(ctxMacro, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Karbonhidrat (220g)', 'Protein (172g)', 'Yağ (64g)'],
+                    datasets: [{
+                        data: [880, 688, 576],
+                        backgroundColor: ['#f59e0b', '#059669', '#334155'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 }, boxWidth: 12 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / 2144) * 100).toFixed(1);
+                                    return ` ${context.label}: ${value} kcal (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: 24-Week Trajectory Chart
+            const ctxProgress = document.getElementById('progressChart').getContext('2d');
+            const weeks = Array.from({length: 24}, (_, i) => `${i + 1}.Hafta`);
+            const weightData = weeks.map((_, i) => (80 - ((i + 1) * 0.437)).toFixed(1));
+            const fatData = weeks.map((_, i) => (22 - ((i + 1) * 0.458)).toFixed(1));
+
+            new Chart(ctxProgress, {
+                type: 'line',
+                data: {
+                    labels: weeks,
+                    datasets: [
+                        {
+                            label: 'Tahmini Ağırlık (kg)',
+                            data: weightData,
+                            borderColor: '#059669',
+                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Tahmini Yağ Oranı (%)',
+                            data: fatData,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Ağırlık (kg)' },
+                            min: 65,
+                            max: 82
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Yağ Oranı (%)' },
+                            min: 8,
+                            max: 25,
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
